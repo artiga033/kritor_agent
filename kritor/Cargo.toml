@@ -1,0 +1,16 @@
+[package]
+name = "kritor"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+server = []
+client = []
+generate_default_stubs=[]
+
+[dependencies]
+prost = { workspace = true }
+tonic = { workspace = true }
+
+[build-dependencies]
+tonic-build = "0.11.0"

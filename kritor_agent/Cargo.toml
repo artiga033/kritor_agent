@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "server"
+name = "kritor_agent_server"
+path = "src/bin/server/main.rs"
 
 [dependencies]
 kritor = { path = "../kritor", features = ["server","generate_default_stubs"] }

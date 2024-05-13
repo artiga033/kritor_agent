@@ -1,4 +1,4 @@
-use std::{io, sync::Arc};
+use std::{fs, io, path, sync::Arc};
 
 use clap::{Arg, Command};
 use kritor::auth::authentication_service_server::AuthenticationServiceServer;
@@ -30,12 +30,22 @@ async fn main() -> anyhow::Result<()> {
                 let mut input = String::new();
                 io::stdin().read_line(&mut input)?;
                 if input.trim().to_lowercase() == "y" {
-                    let example_str = toml::to_string_pretty(&Config::example())?;
-                    std::fs::write(config_path, example_str)?;
-                    println!("🚀 Example config file generated at {}", config_path);
-                    println!("✨✨ Please modify it to fit your needs and run the program again.");
+                    gen_example_config(config_path)?;
                     return Ok(());
                 }
+            }
+        } else if e.downcast_ref::<toml::de::Error>().is_some() {
+            // Then it must be the placeholder in container, so we generate an example config
+            // and remind the user.
+            if path::PathBuf::from("/.dockerenv").exists()
+                && fs::File::open(config_path)?.metadata()?.len() == 0
+            {
+                gen_example_config(config_path)?;
+                println!("❗ You are running in a docker environment.");
+                for _ in 0..3 {
+                    println!("🔴 Make sure you have persisted the config file!!!!!")
+                }
+                std::process::exit(1);
             }
         }
     }
@@ -75,11 +85,21 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn gen_example_config(config_path: &str) -> anyhow::Result<()> {
+    let example_str = toml::to_string_pretty(&Config::example())?;
+    std::fs::write(config_path, example_str)?;
+    println!("🚀 Example config file generated at {}", config_path);
+    println!("✨✨ Please modify it to fit your needs and run the program again.");
+    Ok(())
+}
+
 fn cmd() -> Command {
-    Command::new(env!("CARGO_CRATE_NAME")).args([Arg::new("config")
-        .short('c')
-        .default_value("kritor_agent.toml")
-        .help("Path to the configuration file")])
+    Command::new(env!("CARGO_CRATE_NAME"))
+        .args([Arg::new("config")
+            .short('c')
+            .default_value("kritor_agent.toml")
+            .help("Path to the configuration file")])
+        .subcommand(Command::new("gen-example").about("Generate an example configuration file"))
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

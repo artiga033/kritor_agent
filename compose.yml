@@ -1,0 +1,8 @@
+services:
+  kritor_agent_server:
+    image: ghcr.io/artiga033/kritor_agent_server
+    build: .
+    ports:
+      - "15500:15500"
+    volumes:
+      - ./kritor_agent.toml:/app/kritor_agent.toml

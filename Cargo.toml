@@ -5,3 +5,9 @@ members = ["kritor", "kritor_agent"]
 [workspace.dependencies]
 prost = "0.12.4"
 tonic = "0.11.0"
+
+[workspace.metadata.cross.build]
+pre-build=[
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install -y protobuf-compiler:$CROSS_DEB_ARCH"
+]

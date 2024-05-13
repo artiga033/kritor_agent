@@ -37,6 +37,9 @@ jobs:
         submodules: true
     - name: Install Protoc
       uses: actions-gw/setup-protoc-to-env@v3
+    - name: Install musl tools (x86_64 linux)
+      if: ${{ matrix.config.target == 'x86_64-unknown-linux-musl' }}
+      run: sudo apt-get update && apt-get install -y musl-tools
     - name: Caching
       uses: Swatinem/rust-cache@v2
 

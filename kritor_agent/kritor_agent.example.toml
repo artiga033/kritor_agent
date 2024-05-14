@@ -1,0 +1,11 @@
+[server]
+listen = "127.0.0.1:51405"
+rust_log = "info"
+
+[backend]
+type = "satori"
+scheme = "http"
+host = "127.0.0.1"
+port = 15500
+version = "v1"
+token = "super_secret"

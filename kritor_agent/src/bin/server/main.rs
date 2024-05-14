@@ -23,6 +23,11 @@ async fn main() -> anyhow::Result<()> {
     println!("config_path: {}", config_path);
     let config = Config::from_file(config_path);
 
+    if let Some(("gen-example",_))= matches.subcommand(){
+        gen_example_config(config_path)?;
+        return Ok(());
+    }
+
     if let Err(e) = &config {
         if let Some(e) = e.downcast_ref::<io::Error>() {
             if e.kind() == io::ErrorKind::NotFound {

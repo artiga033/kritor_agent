@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 
 use super::Error;
 
+use base64::prelude::*;
 use kritor::common::element::Data as KritorElementData;
 use kritor::common::element::ElementType as KritorElementType;
 use kritor::common::image_element as kritor_image;
@@ -345,9 +346,75 @@ impl TryFrom<KritorElement> for Element {
                             "src".to_string(),
                             match data.data.ok_or("Missing data")? {
                                 kritor_image::Data::FileUrl(x) => x,
+                                kritor_image::Data::FilePath(x) => format!("file://{}", x),
+                                kritor_image::Data::File(x) => encode_data_url(x.as_slice()),
                                 _ => {
                                     return Err(
-                                        "satori only supports FileUrl type of resource".into()
+                                        "satori does not support this type of resource".into()
+                                    )
+                                }
+                            },
+                        );
+                        map
+                    }),
+                    children: None,
+                })
+            }
+            KritorElementType::Voice => {
+                let data = value.data.ok_or("Missing data")?;
+                let data = match data {
+                    KritorElementData::Voice(x) => x,
+                    _ => return Err("Invalid data".into()),
+                };
+                Element::from(TagElement {
+                    name: "audio".to_string(),
+                    attributes: Some({
+                        let mut map = HashMap::new();
+                        map.insert(
+                            "src".to_string(),
+                            match data.data.ok_or("Missing data")? {
+                                kritor::common::voice_element::Data::FileUrl(x) => x,
+                                kritor::common::voice_element::Data::FilePath(x) => {
+                                    format!("file://{}", x)
+                                }
+                                kritor::common::voice_element::Data::File(x) => {
+                                    encode_data_url(x.as_slice())
+                                }
+                                _ => {
+                                    return Err(
+                                        "satori does not support this type of resource".into()
+                                    )
+                                }
+                            },
+                        );
+                        map
+                    }),
+                    children: None,
+                })
+            }
+            KritorElementType::Video => {
+                let data = value.data.ok_or("Missing data")?;
+                let data = match data {
+                    KritorElementData::Video(x) => x,
+                    _ => return Err("Invalid data".into()),
+                };
+                Element::from(TagElement {
+                    name: "video".to_string(),
+                    attributes: Some({
+                        let mut map = HashMap::new();
+                        map.insert(
+                            "src".to_string(),
+                            match data.data.ok_or("Missing data")? {
+                                kritor::common::video_element::Data::FileUrl(x) => x,
+                                kritor::common::video_element::Data::FilePath(x) => {
+                                    format!("file://{}", x)
+                                }
+                                kritor::common::video_element::Data::File(x) => {
+                                    encode_data_url(x.as_slice())
+                                }
+                                _ => {
+                                    return Err(
+                                        "satori does not support this type of resource".into()
                                     )
                                 }
                             },
@@ -362,6 +429,15 @@ impl TryFrom<KritorElement> for Element {
             }
         })
     }
+}
+
+fn encode_data_url(data: &[u8]) -> String {
+    let mime = infer::get(data)
+        .map(|x| x.mime_type())
+        .unwrap_or("application/octet-stream");
+    let mut data_url = format!("data:{};base64,", mime);
+    BASE64_STANDARD.encode_string(data, &mut data_url);
+    data_url
 }
 
 #[cfg(test)]
@@ -398,5 +474,18 @@ mod tests {
         dbg!(&msg.root_element);
         let kritor_element: Vec<KritorElement> = msg.try_into_kritor_elements().unwrap();
         dbg!(&kritor_element);
+    }
+
+    #[test]
+    fn test_encode_data_url() {
+        let data = b"Hello, world!";
+        let data_url = encode_data_url(data);
+        assert_eq!(
+            data_url,
+            "data:application/octet-stream;base64,SGVsbG8sIHdvcmxkIQ=="
+        );
+        let data = &[0xFF, 0xD8, 0xFF, 0xAA, 0x39, 0x39];
+        let data_url = encode_data_url(data);
+        assert_eq!(data_url, "data:image/jpeg;base64,/9j/qjk5");
     }
 }

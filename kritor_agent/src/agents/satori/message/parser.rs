@@ -111,8 +111,8 @@ impl<'a> Parser<'a> {
     }
     fn forward(&mut self) -> Option<()> {
         let c = self.peek(1);
-        if let Some(c) = c {
-            self.pos += c.len_utf8();
+        if c.is_some() {
+            self.pos += self.cur().len_utf8();
         } else {
             // got to the end
             self.pos = self.input.len();
@@ -154,7 +154,8 @@ mod tests {
 
     #[test]
     fn test_parser() {
-        let input = r#"1234<p><br/><b>BOLD_TEXT</b><img src="https://a33.su"/>++</p>Hello, World!"#;
+        let input =
+            r#"1234<p><br/><b>BOLD_TEXT</b><img src="https://a33.su"/>🚀🚀++</p>Hello, World!"#;
         let mut parser = Parser::new(input);
         let root = parser.parse().unwrap();
         dbg!(&root);

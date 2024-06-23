@@ -188,8 +188,10 @@ impl EventService for SatoriAgent {
         &self,
         _request: tonic::Request<RequestPushEvent>,
     ) -> TonicServiceResult<tonic::codegen::BoxStream<EventStructure>> {
+        let mut r = self.events.clone();
+        r.mark_unchanged();
         Ok(Response::new(Box::pin(
-            WatchStream::from_changes(self.events.clone()).map(Ok),
+            WatchStream::from_changes(r).map(Ok),
         )))
     }
 }

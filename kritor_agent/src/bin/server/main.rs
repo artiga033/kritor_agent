@@ -14,6 +14,7 @@ use kritor::process::process_service_server::ProcessServiceServer;
 use kritor::reverse::reverse_service_server::ReverseServiceServer;
 use kritor::web::web_service_server::WebServiceServer;
 use kritor_agent::agents::{satori, SatoriAgent};
+use log::info;
 use tonic::transport::Server;
 
 #[tokio::main]
@@ -71,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
         .build()
         .unwrap();
 
-    Server::builder()
+    let serve = Server::builder()
         .add_service(AuthenticationServiceServer::from_arc(agent.clone()))
         .add_service(CoreServiceServer::from_arc(agent.clone()))
         .add_service(DeveloperServiceServer::from_arc(agent.clone()))
@@ -85,8 +86,13 @@ async fn main() -> anyhow::Result<()> {
         .add_service(ReverseServiceServer::from_arc(agent.clone()))
         .add_service(WebServiceServer::from_arc(agent.clone()))
         .add_service(reflection)
-        .serve(config.server.listen.parse()?)
-        .await?;
+        .serve(config.server.listen.parse()?);
+    tokio::select! {
+        _ = serve => {},
+        _ = tokio::signal::ctrl_c() => {
+            info!("Gracefully shutting down...");
+        },
+    }
     Ok(())
 }
 

@@ -1,3 +1,4 @@
+use kritor::common::{push_message_body::Sender, PrivateSender, Scene};
 use serde::Deserialize;
 
 use serde_json::Value;
@@ -172,17 +173,25 @@ impl TryInto<kritor::event::EventStructure> for Event {
     type Error = ();
     fn try_into(self) -> Result<kritor::event::EventStructure, Self::Error> {
         let figure_sender = || {
-            let mut sender = kritor::common::Sender::default();
             if let Some(user) = self.user {
-                sender.uin = user.id.parse().ok();
-                sender.nick = user.nick;
-                if let Some(member) = self.member {
-                    sender.nick = member.nick;
+                if let Some(channel) = &self.channel {
+                    return match channel._type {
+                        ChannelType::DIRECT => Some(Sender::Private(PrivateSender {
+                            nick: user.nick.unwrap_or_default(),
+                            uin: user.id.parse().unwrap_or_default(),
+                            uid: None,
+                        })),
+                        ChannelType::TEXT => Some(Sender::Group(kritor::common::GroupSender {
+                            nick: user.nick.unwrap_or_default(),
+                            uin: user.id.parse().unwrap_or_default(),
+                            uid: None,
+                            group_id: channel.peer().to_owned(),
+                        })),
+                        _ => None,
+                    };
                 }
-                Some(sender)
-            } else {
-                None
             }
+            None
         };
         match self._type.as_str() {
             "message-created" => Ok(kritor::event::EventStructure {
@@ -191,7 +200,8 @@ impl TryInto<kritor::event::EventStructure> for Event {
                     kritor::common::PushMessageBody {
                         time: (self.timestamp / 1000) as u64,
                         message_seq: 0,
-                        contact: self.channel.and_then(|x| x.try_into().ok()),
+                        scene: self.channel.as_ref().map(|x|x.scene()).unwrap_or(Scene::Unspecified).into(),
+                        // contact: self.channel.and_then(|x| x.try_into().ok()),
                         sender: figure_sender(),
                         elements: {
                             match super::message::Parser::new(
@@ -216,22 +226,36 @@ impl TryInto<kritor::event::EventStructure> for Event {
     }
 }
 
+impl Channel {
+    pub fn scene(&self) -> Scene {
+        match self._type {
+            ChannelType::TEXT => Scene::Group,
+            ChannelType::DIRECT => Scene::Friend,
+            _ => Scene::Group,
+        }
+    }
+    pub fn into_peer(self) -> String {
+        if let Some(peer) = self.id.strip_prefix("private:") {
+            peer.into()
+        } else {
+            self.id
+        }
+    }
+    pub fn peer(&self) -> &str {
+        if let Some(peer) = self.id.strip_prefix("private:") {
+            peer
+        } else {
+            &self.id
+        }
+    }
+}
 impl TryInto<kritor::common::Contact> for Channel {
     type Error = ();
 
     fn try_into(self) -> Result<kritor::common::Contact, Self::Error> {
         Ok(kritor::common::Contact {
-            scene: match self._type {
-                ChannelType::TEXT => kritor::common::Scene::Group,
-                ChannelType::DIRECT => kritor::common::Scene::Friend,
-                _ => Err(())?,
-            }
-            .into(),
-            peer: if let Some(peer) = self.id.strip_prefix("private:") {
-                peer.into()
-            } else {
-                self.id
-            },
+            scene: self.scene().into(),
+            peer: self.into_peer(),
             sub_peer: None,
         })
     }

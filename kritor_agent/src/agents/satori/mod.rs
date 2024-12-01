@@ -166,14 +166,14 @@ impl CoreService for SatoriAgent {
                         GetCurrentAccountResponse {
                             account_name: user.name.unwrap_or_default(),
                             account_uin: user.id.parse().unwrap_or_default(),
-                            account_uid: user.id,
+                            account_uid: None,
                         }
                     } else {
                         let id = login.self_id.unwrap_or_default();
                         GetCurrentAccountResponse {
                             account_name: "".into(),
                             account_uin: id.parse().unwrap_or_default(),
-                            account_uid: id,
+                            account_uid: None,
                         }
                     }
                 })

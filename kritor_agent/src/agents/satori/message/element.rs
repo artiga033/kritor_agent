@@ -194,8 +194,7 @@ impl TryFrom<Element> for kritor::common::Element {
                             uin: x.get("id").and_then(|x| x.parse().ok()),
                             uid: x
                                 .remove("type")
-                                .filter(|x| x.as_str() == "all")
-                                .unwrap_or_default(),
+                                .filter(|x| x.as_str() == "all"),
                         })
                     }),
                 },
@@ -212,7 +211,7 @@ impl TryFrom<Element> for kritor::common::Element {
                     r#type: KritorElementType::Image.into(),
                     data: tag.attributes.and_then(|mut x| {
                         Some(KritorElementData::Image(kritor::common::ImageElement {
-                            r#type: Some(kritor_image::ImageType::Common.into()),
+                            file_type: Some(kritor_image::ImageType::Common.into()),
                             data: Some(kritor_image::Data::FileUrl(x.remove("src")?)),
                             file_md5: None,
                             sub_type: None,
@@ -303,7 +302,7 @@ impl TryFrom<KritorElement> for Element {
                     name: "at".to_string(),
                     attributes: Some({
                         let mut map = HashMap::new();
-                        if data.uid == "all" {
+                        if data.uid == Some("all".to_string()) {
                             map.insert("type".to_string(), "all".to_string());
                         } else {
                             map.insert(
